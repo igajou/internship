@@ -1,0 +1,2 @@
+# levii-internship
+Leviiでのインターンシップ用
