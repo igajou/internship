@@ -23,6 +23,11 @@ app = Flask(__name__)
 
 
 # [START form]
+@app.route('/')
+def show_welcome():
+    return render_template('welcome.html')
+
+
 @app.route('/form')
 def form():
     return render_template('form.html')
