@@ -47,7 +47,7 @@ class Greeting(ndb.Model):
 
 # [START query]
     @classmethod
-    def query_book(cls, ancestor_key):
+    def query_greeting(cls, ancestor_key):
         return cls.query(ancestor=ancestor_key).order(-cls.date)
 # [END query]
 
@@ -68,7 +68,7 @@ class MainPage(webapp2.RequestHandler):
             <hr>
             <form action="/?%s" method="post">
                 <form>New guestbook name : <input value="" name="guestbook_name">
-                                           <input type="submit" value="add book"></form>
+                                           <input type="submit" value="add & switch book"></form>
             </form>
             </body></html>""")
 
@@ -78,31 +78,32 @@ class MainPage(webapp2.RequestHandler):
             name = guestbook_name,
             greeting_number = 0
         )
-        book.put()
-
+        book_key = book.put()
+        self.redirect('/books/' + str(book_key.id()))
 
 class BookPage(webapp2.RequestHandler):
-    def get(self):
-        self.response.out.write('<html><body>')
-        guestbook_name = self.request.get('guestbook_name')
-        ancestor_key = ndb.Key("Book", guestbook_name or "*notitle*")
-        greetings = Greeting.query_book(ancestor_key).fetch(20)
+    def get(self, guestbook_id):
+        write = self.response.out.write
+        write('<html><body>')
+        book = Book.get_by_id(long(guestbook_id))
+        guestbook_name = book.name
+        write('<h2>Guestbook: {guestbook_name}</h2>'.format(
+            guestbook_name = guestbook_name
+        ))
+        # ancestor_key = ndb.Key("Book", guestbook_name or "*notitle*")
+        # greetings = Greeting.query_book(ancestor_key).fetch(20)
+        greetings = Greeting.query_greeting(book.key).fetch(20)
 
         for greeting in greetings:
-            self.response.out.write('<blockquote>%s</blockquote>' %
+            write('<blockquote>%s</blockquote>' %
                                     cgi.escape(greeting.content))
 
-        self.response.out.write("""
-          <form action="/sign?%s" method="post">
-            <div><textarea name="content" rows="3" cols="60"></textarea></div>
-            <div><input type="submit" value="Sign Guestbook"></div>
-          </form>
-          <hr>
-          <form>Guestbook name: <input value="%s" name="guestbook_name">
-          <input type="submit" value="switch"></form>
-        </body>
-      </html>""" % (urllib.urlencode({'guestbook_name': guestbook_name}),
-                    cgi.escape(guestbook_name)))
+        write("""
+            <form action="/sign?%s" method="post">
+                <div><textarea name="content" rows="3" cols="60"></textarea></div>
+                <div><input type="submit" value="Sign Guestbook"></div>
+            </form>
+            </body></html>""" % urllib.urlencode({'guestbook_id': guestbook_id}))
 
 
 # [START submit]
@@ -110,18 +111,20 @@ class SubmitForm(webapp2.RequestHandler):
     def post(self):
         # We set the parent key on each 'Greeting' to ensure each guestbook's
         # greetings are in the same entity group.
-        guestbook_name = self.request.get('guestbook_name')
-        greeting = Greeting(parent=ndb.Key("Book",
-                                           guestbook_name or "*notitle*"),
+        guestbook_id = self.request.get('guestbook_id')
+        book = Book.get_by_id(long(guestbook_id))
+        book.greeting_number += 1
+        book.put()
+        greeting = Greeting(parent=book.key,
                             content=self.request.get('content'))
         greeting.put()
 # [END submit]
-        self.redirect('/?' + urllib.urlencode(
-            {'guestbook_name': guestbook_name}))
+        self.redirect('/books/' + str(guestbook_id))
 
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/sign', SubmitForm)
+    ('/sign', SubmitForm),
+    ('/books/(\d+)', BookPage)
 ])
 # [END all]
