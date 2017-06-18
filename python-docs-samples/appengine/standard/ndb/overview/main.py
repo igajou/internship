@@ -57,12 +57,16 @@ class MainPage(webapp2.RequestHandler):
         write = self.response.out.write
         write('<html><body>')
         write('<ul>')
+        write('<h2>Guestbook List</h2>')
+
         for book in Book.query_book():
-            book_item = '<li>{name} : {greeting_num}</li>'.format(
+            book_item = '<li><a href="/books/{id}">{name} : {greeting_num}</a></li>'.format(
+                id = book.key.id(),
                 name = book.name,
                 greeting_num = book.greeting_number
             )
             write(book_item)
+
         write('</ul>')
         write("""
             <hr>
@@ -80,6 +84,7 @@ class MainPage(webapp2.RequestHandler):
         )
         book_key = book.put()
         self.redirect('/books/' + str(book_key.id()))
+
 
 class BookPage(webapp2.RequestHandler):
     def get(self, guestbook_id):
@@ -103,6 +108,7 @@ class BookPage(webapp2.RequestHandler):
                 <div><textarea name="content" rows="3" cols="60"></textarea></div>
                 <div><input type="submit" value="Sign Guestbook"></div>
             </form>
+            <a href="/">Guestbook List</a> 
             </body></html>""" % urllib.urlencode({'guestbook_id': guestbook_id}))
 
 
