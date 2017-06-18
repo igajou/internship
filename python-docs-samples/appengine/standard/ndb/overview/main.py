@@ -29,6 +29,15 @@ from google.appengine.ext import ndb
 import webapp2
 
 
+class Book(ndb.Model):
+    name = ndb.StringProperty()
+    greeting_number = ndb.IntegerProperty()
+
+    @classmethod
+    def query_book(cls):
+        return cls.query().order(cls.name)
+
+
 # [START greeting]
 class Greeting(ndb.Model):
     """Models an individual Guestbook entry with content and date."""
@@ -40,9 +49,39 @@ class Greeting(ndb.Model):
     @classmethod
     def query_book(cls, ancestor_key):
         return cls.query(ancestor=ancestor_key).order(-cls.date)
+# [END query]
 
 
 class MainPage(webapp2.RequestHandler):
+    def get(self):
+        write = self.response.out.write
+        write('<html><body>')
+        write('<ul>')
+        for book in Book.query_book():
+            book_item = '<li>{name} : {greeting_num}</li>'.format(
+                name = book.name,
+                greeting_num = book.greeting_number
+            )
+            write(book_item)
+        write('</ul>')
+        write("""
+            <hr>
+            <form action="/?%s" method="post">
+                <form>New guestbook name : <input value="" name="guestbook_name">
+                                           <input type="submit" value="add book"></form>
+            </form>
+            </body></html>""")
+
+    def post(self):
+        guestbook_name = self.request.get('guestbook_name')
+        book = Book(
+            name = guestbook_name,
+            greeting_number = 0
+        )
+        book.put()
+
+
+class BookPage(webapp2.RequestHandler):
     def get(self):
         self.response.out.write('<html><body>')
         guestbook_name = self.request.get('guestbook_name')
@@ -52,7 +91,6 @@ class MainPage(webapp2.RequestHandler):
         for greeting in greetings:
             self.response.out.write('<blockquote>%s</blockquote>' %
                                     cgi.escape(greeting.content))
-# [END query]
 
         self.response.out.write("""
           <form action="/sign?%s" method="post">
