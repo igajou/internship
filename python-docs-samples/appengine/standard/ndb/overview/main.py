@@ -33,6 +33,12 @@ class Book(ndb.Model):
     name = ndb.StringProperty()
     greeting_number = ndb.IntegerProperty()
 
+    def get_greeting(self):
+        return Greeting.query(ancestor=self.key).order(-Greeting.date)
+
+    def put_greeting(self, content):
+        Greeting(parent=self.key, content=content).put()
+
     @classmethod
     def query_book(cls):
         return cls.query().order(cls.name)
@@ -95,9 +101,7 @@ class BookPage(webapp2.RequestHandler):
         write('<h2>Guestbook: {guestbook_name}</h2>'.format(
             guestbook_name = guestbook_name
         ))
-        # ancestor_key = ndb.Key("Book", guestbook_name or "*notitle*")
-        # greetings = Greeting.query_book(ancestor_key).fetch(20)
-        greetings = Greeting.query_greeting(book.key).fetch(20)
+        greetings = book.get_greeting().fetch(20)
 
         for greeting in greetings:
             write('<blockquote>%s</blockquote>' %
@@ -121,9 +125,7 @@ class SubmitForm(webapp2.RequestHandler):
         book = Book.get_by_id(long(guestbook_id))
         book.greeting_number += 1
         book.put()
-        greeting = Greeting(parent=book.key,
-                            content=self.request.get('content'))
-        greeting.put()
+        book.put_greeting(self.request.get('content'))
 # [END submit]
         self.redirect('/books/' + str(guestbook_id))
 
