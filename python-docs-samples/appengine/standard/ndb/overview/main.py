@@ -31,10 +31,12 @@ import webapp2
 
 class Book(ndb.Model):
     name = ndb.StringProperty()
-    greeting_number = ndb.IntegerProperty()
 
     def get_greeting(self):
         return Greeting.query(ancestor=self.key).order(-Greeting.date)
+
+    def get_greeting_num(self):
+        return Greeting.query(ancestor=self.key).count()
 
     def put_greeting(self, content):
         Greeting(parent=self.key, content=content).put()
@@ -69,7 +71,7 @@ class MainPage(webapp2.RequestHandler):
             book_item = '<li><a href="/books/{id}">{name} : {greeting_num}</a></li>'.format(
                 id = book.key.id(),
                 name = book.name,
-                greeting_num = book.greeting_number
+                greeting_num = book.get_greeting_num()
             )
             write(book_item)
 
@@ -86,7 +88,6 @@ class MainPage(webapp2.RequestHandler):
         guestbook_name = self.request.get('guestbook_name')
         book = Book(
             name = guestbook_name,
-            greeting_number = 0
         )
         book_key = book.put()
         self.redirect('/books/' + str(book_key.id()))
@@ -123,8 +124,6 @@ class SubmitForm(webapp2.RequestHandler):
         # greetings are in the same entity group.
         guestbook_id = self.request.get('guestbook_id')
         book = Book.get_by_id(long(guestbook_id))
-        book.greeting_number += 1
-        book.put()
         book.put_greeting(self.request.get('content'))
 # [END submit]
         self.redirect('/books/' + str(guestbook_id))
