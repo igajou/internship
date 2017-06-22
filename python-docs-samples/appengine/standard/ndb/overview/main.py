@@ -32,17 +32,17 @@ import webapp2
 class Book(ndb.Model):
     name = ndb.StringProperty()
 
-    def get_greeting(self):
+    def fetch_greetings(self):
         return Greeting.query(ancestor=self.key).order(-Greeting.date)
 
-    def get_greeting_num(self):
+    def fetch_greeting_num(self):
         return Greeting.query(ancestor=self.key).count()
 
     def put_greeting(self, content):
         Greeting(parent=self.key, content=content).put()
 
     @classmethod
-    def query_book(cls):
+    def fetch_books(cls):
         return cls.query().order(cls.name)
 
 
@@ -53,12 +53,6 @@ class Greeting(ndb.Model):
     date = ndb.DateTimeProperty(auto_now_add=True)
 # [END greeting]
 
-# [START query]
-    @classmethod
-    def query_greeting(cls, ancestor_key):
-        return cls.query(ancestor=ancestor_key).order(-cls.date)
-# [END query]
-
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -67,11 +61,11 @@ class MainPage(webapp2.RequestHandler):
         write('<ul>')
         write('<h2>Guestbook List</h2>')
 
-        for book in Book.query_book():
+        for book in Book.fetch_books():
             book_item = '<li><a href="/books/{id}">{name} : {greeting_num}</a></li>'.format(
                 id = book.key.id(),
                 name = book.name,
-                greeting_num = book.get_greeting_num()
+                greeting_num = book.fetch_greeting_num()
             )
             write(book_item)
 
@@ -102,7 +96,7 @@ class BookPage(webapp2.RequestHandler):
         write('<h2>Guestbook: {guestbook_name}</h2>'.format(
             guestbook_name = guestbook_name
         ))
-        greetings = book.get_greeting().fetch(20)
+        greetings = book.fetch_greetings().fetch(20)
 
         for greeting in greetings:
             write('<blockquote>%s</blockquote>' %
