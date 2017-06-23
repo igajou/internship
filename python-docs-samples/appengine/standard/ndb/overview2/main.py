@@ -41,6 +41,10 @@ class Book(ndb.Model):
     def put_greeting(self, content):
         Greeting(parent=self.key, content=content).put()
 
+    def put_name(self, _name):
+        self.name = _name
+        self.put()
+
     @classmethod
     def fetch_books(cls):
         return cls.query().order(cls.name)
@@ -96,6 +100,13 @@ class BookPage(webapp2.RequestHandler):
         write('<h2>Guestbook: {guestbook_name}</h2>'.format(
             guestbook_name = guestbook_name
         ))
+        write("""
+            <form action="/books/{guestbook_id}?%s" method="post">
+                <form>New guestbook name : <input value="" name="guestbook_name">
+                                           <input type="submit" value="rename"></form>
+            </form>""".format(
+            guestbook_id = guestbook_id
+        ))
         greetings = book.fetch_greetings().fetch(20)
 
         for greeting in greetings:
@@ -109,6 +120,12 @@ class BookPage(webapp2.RequestHandler):
             </form>
             <a href="/">Guestbook List</a> 
             </body></html>""" % urllib.urlencode({'guestbook_id': guestbook_id}))
+
+    def post(self, guestbook_id):
+        guestbook_name = self.request.get('guestbook_name')
+        book = Book.get_by_id(long(guestbook_id))
+        book.put_name(guestbook_name)
+        self.redirect('/books/' + str(guestbook_id))
 
 
 # [START submit]
