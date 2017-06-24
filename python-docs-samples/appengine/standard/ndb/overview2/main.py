@@ -51,6 +51,9 @@ class Book(ndb.Model):
         self.name = _name
         self.put()
 
+    def delete_greeting(self, greeting_id):
+        Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
+
     @classmethod
     def fetch_books(cls):
         return cls.query().order(cls.name)
@@ -117,11 +120,19 @@ class GreetingListHandler(webapp2.RequestHandler):
         self.redirect('/books/' + str(guestbook_id))
 
 
+class GreetingHandler(webapp2.RequestHandler):
+    def post(self, guestbook_id, greeting_id):
+        book = Book.get_by_id(long(guestbook_id))
+        book.delete_greeting(greeting_id)
+        self.redirect('/books/' + str(guestbook_id))
+
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/books/(\d+)', BookPage),
     ('/api/books', BookListHandler),
     ('/api/books/(\d+)', BookHandler),
-    ('/api/books/(\d+)/greetings', GreetingListHandler)
+    ('/api/books/(\d+)/greetings', GreetingListHandler),
+    ('/api/books/(\d+)/greetings/(\d+)', GreetingHandler)
 ])
 # [END all]

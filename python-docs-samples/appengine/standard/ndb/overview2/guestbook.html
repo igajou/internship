@@ -13,7 +13,10 @@
     <hr>
 
     {% for greeting in greetings %}
-        <blockquote>{{ greeting.content }}</blockquote>
+        <blockquote>{{ greeting.content }}
+        <form action="/api/books/{{ guestbook_id }}/greetings/{{ greeting.key.id() }}" method="post">
+            <input type="submit" value="delete"></form>
+        </blockquote>
     {% endfor %}
 
     <form action="/api/books/{{ guestbook_id }}/greetings" method="post">
