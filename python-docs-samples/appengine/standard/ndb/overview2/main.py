@@ -75,14 +75,6 @@ class MainPage(webapp2.RequestHandler):
         template = JINJA_ENVIRONMENT.get_template('index.html')
         self.response.write(template.render(template_values))
 
-    def post(self):
-        guestbook_name = self.request.get('guestbook_name')
-        book = Book(
-            name = guestbook_name,
-        )
-        book_key = book.put()
-        self.redirect('/books/' + str(book_key.id()))
-
 
 class BookPage(webapp2.RequestHandler):
     def get(self, guestbook_id):
@@ -99,6 +91,18 @@ class BookPage(webapp2.RequestHandler):
         template = JINJA_ENVIRONMENT.get_template('guestbook.html')
         self.response.write(template.render(template_values))
 
+
+class BookListHandler(webapp2.RequestHandler):
+    def post(self):
+        guestbook_name = self.request.get('guestbook_name')
+        book = Book(
+            name = guestbook_name,
+        )
+        book_key = book.put()
+        self.redirect('/books/' + str(book_key.id()))
+
+
+class BookHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
         book = Book.get_by_id(long(guestbook_id))
@@ -106,20 +110,18 @@ class BookPage(webapp2.RequestHandler):
         self.redirect('/books/' + str(guestbook_id))
 
 
-# [START submit]
-class SubmitForm(webapp2.RequestHandler):
+class GreetingListHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
-        # We set the parent key on each 'Greeting' to ensure each guestbook's
-        # greetings are in the same entity group.
         book = Book.get_by_id(long(guestbook_id))
         book.put_greeting(self.request.get('content'))
-# [END submit]
         self.redirect('/books/' + str(guestbook_id))
 
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/sign/(\d+)', SubmitForm),
-    ('/books/(\d+)', BookPage)
+    ('/books/(\d+)', BookPage),
+    ('/api/books', BookListHandler),
+    ('/api/books/(\d+)', BookHandler),
+    ('/api/books/(\d+)/greetings', GreetingListHandler)
 ])
 # [END all]
