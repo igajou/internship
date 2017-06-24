@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <ul>
+    <h2>Guestbook List</h2>
+
+    {% for book in books %}
+        <li><a href="/books/{{ book.key.id() }}">
+            {{ book.name }} : {{ book.fetch_greeting_num() }}</a></li>
+    {% endfor %}
+
+    </ul>
+    <hr>
+
+    <form action="/" method="post">
+        <form>New guestbook name : <input value="" name="guestbook_name">
+            <input type="submit" value="add & switch book"></form>
+    </form>
+
+</body>
+</html>

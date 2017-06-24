@@ -21,12 +21,18 @@ For more information, see README.md
 """
 
 # [START all]
-import cgi
+import os
 import urllib
 
 from google.appengine.ext import ndb
 
 import webapp2
+import jinja2
+
+JINJA_ENVIRONMENT = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
+    extensions=['jinja2.ext.autoescape'],
+    autoescape=True)
 
 
 class Book(ndb.Model):
@@ -60,27 +66,14 @@ class Greeting(ndb.Model):
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
-        write = self.response.out.write
-        write('<html><body>')
-        write('<ul>')
-        write('<h2>Guestbook List</h2>')
+        books = Book.fetch_books()
 
-        for book in Book.fetch_books():
-            book_item = '<li><a href="/books/{id}">{name} : {greeting_num}</a></li>'.format(
-                id = book.key.id(),
-                name = book.name,
-                greeting_num = book.fetch_greeting_num()
-            )
-            write(book_item)
+        template_values = {
+            'books': books
+        }
 
-        write('</ul>')
-        write("""
-            <hr>
-            <form action="/?%s" method="post">
-                <form>New guestbook name : <input value="" name="guestbook_name">
-                                           <input type="submit" value="add & switch book"></form>
-            </form>
-            </body></html>""")
+        template = JINJA_ENVIRONMENT.get_template('index.html')
+        self.response.write(template.render(template_values))
 
     def post(self):
         guestbook_name = self.request.get('guestbook_name')
@@ -93,33 +86,18 @@ class MainPage(webapp2.RequestHandler):
 
 class BookPage(webapp2.RequestHandler):
     def get(self, guestbook_id):
-        write = self.response.out.write
-        write('<html><body>')
         book = Book.get_by_id(long(guestbook_id))
         guestbook_name = book.name
-        write('<h2>Guestbook: {guestbook_name}</h2>'.format(
-            guestbook_name = guestbook_name
-        ))
-        write("""
-            <form action="/books/{guestbook_id}?%s" method="post">
-                <form>New guestbook name : <input value="" name="guestbook_name">
-                                           <input type="submit" value="rename"></form>
-            </form>""".format(
-            guestbook_id = guestbook_id
-        ))
         greetings = book.fetch_greetings().fetch(20)
 
-        for greeting in greetings:
-            write('<blockquote>%s</blockquote>' %
-                                    cgi.escape(greeting.content))
+        template_values = {
+            'guestbook_id': guestbook_id,
+            'guestbook_name': urllib.quote_plus(guestbook_name),
+            'greetings': greetings
+        }
 
-        write("""
-            <form action="/sign?%s" method="post">
-                <div><textarea name="content" rows="3" cols="60"></textarea></div>
-                <div><input type="submit" value="Sign Guestbook"></div>
-            </form>
-            <a href="/">Guestbook List</a> 
-            </body></html>""" % urllib.urlencode({'guestbook_id': guestbook_id}))
+        template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+        self.response.write(template.render(template_values))
 
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
@@ -130,10 +108,9 @@ class BookPage(webapp2.RequestHandler):
 
 # [START submit]
 class SubmitForm(webapp2.RequestHandler):
-    def post(self):
+    def post(self, guestbook_id):
         # We set the parent key on each 'Greeting' to ensure each guestbook's
         # greetings are in the same entity group.
-        guestbook_id = self.request.get('guestbook_id')
         book = Book.get_by_id(long(guestbook_id))
         book.put_greeting(self.request.get('content'))
 # [END submit]
@@ -142,7 +119,7 @@ class SubmitForm(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/sign', SubmitForm),
+    ('/sign/(\d+)', SubmitForm),
     ('/books/(\d+)', BookPage)
 ])
 # [END all]
