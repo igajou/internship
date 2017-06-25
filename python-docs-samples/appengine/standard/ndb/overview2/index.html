@@ -9,8 +9,14 @@
     <h2>Guestbook List</h2>
 
     {% for book in books %}
-        <li><a href="/books/{{ book.key.id() }}">
-            {{ book.name }} : {{ book.fetch_greeting_num() }}</a></li>
+        <li>
+            <a href="/books/{{ book.key.id() }}">
+            {{ book.name }} : {{ book.fetch_greeting_num() }} : [
+            {% for tag in book.tags %}
+                {{ tag.get().type.name }}
+            {% endfor %}
+             ]</a>
+        </li>
     {% endfor %}
 
     </ul>
@@ -18,6 +24,7 @@
 
     <form action="/api/books" method="post">
         <form>New guestbook name : <input value="" name="guestbook_name">
+            Tag name : <input value="" name="tagtype_name">
             <input type="submit" value="add & switch book"></form>
     </form>
 

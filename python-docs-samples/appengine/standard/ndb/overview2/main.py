@@ -37,7 +37,13 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 
 class Book(ndb.Model):
     name = ndb.StringProperty()
+    tags = ndb.KeyProperty(kind='Tag', repeated=True)
 
+    def put_name(self, _name):
+        self.name = _name
+        self.put()
+
+    # Greeting
     def fetch_greetings(self):
         return Greeting.query(ancestor=self.key).order(-Greeting.date)
 
@@ -47,12 +53,18 @@ class Book(ndb.Model):
     def put_greeting(self, content):
         Greeting(parent=self.key, content=content).put()
 
-    def put_name(self, _name):
-        self.name = _name
-        self.put()
-
     def delete_greeting(self, greeting_id):
         Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
+
+    # Tag
+    def post_tag(self, _name):
+        tag_type = TagType.query(TagType.name == _name).get()
+        if tag_type is None:
+            type_key = TagType(name = _name).put()
+            self.tags.append(Tag(parent=type_key, type=type_key.get()).put())
+        else:
+            self.tags.append(Tag.query(ancestor=tag_type.key).get().key)
+        return list(set(self.tags)) # Unique list
 
     @classmethod
     def fetch_books(cls):
@@ -65,6 +77,14 @@ class Greeting(ndb.Model):
     content = ndb.StringProperty()
     date = ndb.DateTimeProperty(auto_now_add=True)
 # [END greeting]
+
+
+class TagType(ndb.Model):
+    name = ndb.StringProperty()
+
+
+class Tag(ndb.Model):
+    type = ndb.StructuredProperty(TagType)
 
 
 class MainPage(webapp2.RequestHandler):
@@ -83,11 +103,13 @@ class BookPage(webapp2.RequestHandler):
     def get(self, guestbook_id):
         book = Book.get_by_id(long(guestbook_id))
         guestbook_name = book.name
+        tag_keys = book.tags
         greetings = book.fetch_greetings().fetch(20)
 
         template_values = {
             'guestbook_id': guestbook_id,
             'guestbook_name': urllib.quote_plus(guestbook_name),
+            'tag_keys': tag_keys,
             'greetings': greetings
         }
 
@@ -98,9 +120,11 @@ class BookPage(webapp2.RequestHandler):
 class BookListHandler(webapp2.RequestHandler):
     def post(self):
         guestbook_name = self.request.get('guestbook_name')
+        tagtype_name = self.request.get('tagtype_name')
         book = Book(
-            name = guestbook_name,
+            name = guestbook_name
         )
+        book.tags = book.post_tag(tagtype_name)
         book_key = book.put()
         self.redirect('/books/' + str(book_key.id()))
 
@@ -108,7 +132,9 @@ class BookListHandler(webapp2.RequestHandler):
 class BookHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
+        tagtype_name = self.request.get('tagtype_name')
         book = Book.get_by_id(long(guestbook_id))
+        book.tags = book.post_tag(tagtype_name)
         book.put_name(guestbook_name)
         self.redirect('/books/' + str(guestbook_id))
 

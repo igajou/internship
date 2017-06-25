@@ -6,8 +6,13 @@
 </head>
 <body>
     <h2>Guestbook: {{ guestbook_name }}</h2>
+    <h4>Tags:
+        {% for tag in tag_keys %}
+            {{ tag.get().type.name }}
+        {% endfor %}</h4>
     <form action="/api/books/{{ guestbook_id }}" method="post">
-        <form>New guestbook name : <input value="" name="guestbook_name">
+        <form>New guestbook name : <input value="{{ guestbook_name }}" name="guestbook_name">
+              Tag name : <input value="" name="tagtype_name">
             <input type="submit" value="rename"></form>
     </form>
     <hr>
