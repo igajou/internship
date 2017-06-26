@@ -41,7 +41,6 @@ class Book(ndb.Model):
 
     def put_name(self, _name):
         self.name = _name
-        self.put()
 
     # Greeting
     def fetch_greetings(self):
@@ -57,7 +56,7 @@ class Book(ndb.Model):
         Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
 
     # Tag
-    def post_tag(self, _name):
+    def put_tag(self, _name):
         tag_type = TagType.query(TagType.name == _name).get()
         if tag_type is None:
             type_key = TagType(name = _name).put()
@@ -124,9 +123,9 @@ class BookListHandler(webapp2.RequestHandler):
         book = Book(
             name = guestbook_name
         )
-        book.tags = book.post_tag(tagtype_name)
+        book.tags = book.put_tag(tagtype_name)
         book_key = book.put()
-        self.redirect('/books/' + str(book_key.id()))
+        self.redirect('/books/{book_id}'.format(book_id=book_key.id()))
 
 
 class BookHandler(webapp2.RequestHandler):
@@ -134,23 +133,24 @@ class BookHandler(webapp2.RequestHandler):
         guestbook_name = self.request.get('guestbook_name')
         tagtype_name = self.request.get('tagtype_name')
         book = Book.get_by_id(long(guestbook_id))
-        book.tags = book.post_tag(tagtype_name)
+        book.tags = book.put_tag(tagtype_name)
         book.put_name(guestbook_name)
-        self.redirect('/books/' + str(guestbook_id))
+        book.put()
+        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
 class GreetingListHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
         book = Book.get_by_id(long(guestbook_id))
         book.put_greeting(self.request.get('content'))
-        self.redirect('/books/' + str(guestbook_id))
+        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
 class GreetingHandler(webapp2.RequestHandler):
     def post(self, guestbook_id, greeting_id):
         book = Book.get_by_id(long(guestbook_id))
         book.delete_greeting(greeting_id)
-        self.redirect('/books/' + str(guestbook_id))
+        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
 app = webapp2.WSGIApplication([
