@@ -53,12 +53,7 @@ class Book(ndb.Model):
         Greeting(parent=self.key, content=content).put()
 
     def delete_greeting(self, greeting_id):
-        try:
-            greeting_key = Greeting.get_by_id(long(greeting_id), parent=self.key).key
-        except:
-            raise
-        else:
-            greeting_key.delete()
+        Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
 
     # Tag
     def put_tag(self, _name):
@@ -73,6 +68,16 @@ class Book(ndb.Model):
     @classmethod
     def fetch_books(cls):
         return cls.query().order(cls.name)
+
+    @classmethod
+    def fetch_book_by_id(cls, book_id):
+        try:
+            book = cls.get_by_id(long(book_id))
+            book.key
+        except:
+            raise
+        else:
+            return book
 
 
 # [START greeting]
@@ -105,20 +110,26 @@ class MainPage(webapp2.RequestHandler):
 
 class BookPage(webapp2.RequestHandler):
     def get(self, guestbook_id):
-        book = Book.get_by_id(long(guestbook_id))
-        guestbook_name = book.name
-        tag_keys = book.tags
-        greetings = book.fetch_greetings().fetch(20)
+        try:
+            book = Book.fetch_book_by_id(long(guestbook_id))
+        except Exception, e:
+            template_values = {'except': True, 'e': e}
+            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            self.response.write(template.render(template_values))
+        else:
+            guestbook_name = book.name
+            tag_keys = book.tags
+            greetings = book.fetch_greetings().fetch(20)
 
-        template_values = {
-            'guestbook_id': guestbook_id,
-            'guestbook_name': urllib.quote_plus(guestbook_name),
-            'tag_keys': tag_keys,
-            'greetings': greetings
-        }
+            template_values = {
+                'guestbook_id': guestbook_id,
+                'guestbook_name': urllib.quote_plus(guestbook_name),
+                'tag_keys': tag_keys,
+                'greetings': greetings
+            }
 
-        template = JINJA_ENVIRONMENT.get_template('guestbook.html')
-        self.response.write(template.render(template_values))
+            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            self.response.write(template.render(template_values))
 
 
 class BookListHandler(webapp2.RequestHandler):
@@ -137,30 +148,42 @@ class BookHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
         tagtype_name = self.request.get('tagtype_name')
-        book = Book.get_by_id(long(guestbook_id))
-        book.tags = book.put_tag(tagtype_name)
-        book.put_name(guestbook_name)
-        book.put()
-        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
-
-
-class GreetingListHandler(webapp2.RequestHandler):
-    def post(self, guestbook_id):
-        book = Book.get_by_id(long(guestbook_id))
-        book.put_greeting(self.request.get('content'))
-        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
-
-
-class GreetingHandler(webapp2.RequestHandler):
-    def post(self, guestbook_id, greeting_id):
-        book = Book.get_by_id(long(guestbook_id))
         try:
-            book.delete_greeting(greeting_id)
+            book = Book.fetch_book_by_id(long(guestbook_id))
         except Exception, e:
             template_values = {'except': True, 'e': e}
             template = JINJA_ENVIRONMENT.get_template('guestbook.html')
             self.response.write(template.render(template_values))
         else:
+            book.tags = book.put_tag(tagtype_name)
+            book.put_name(guestbook_name)
+            book.put()
+            self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
+
+
+class GreetingListHandler(webapp2.RequestHandler):
+    def post(self, guestbook_id):
+        try:
+            book = Book.fetch_book_by_id(long(guestbook_id))
+        except Exception, e:
+            template_values = {'except': True, 'e': e}
+            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            self.response.write(template.render(template_values))
+        else:
+            book.put_greeting(self.request.get('content'))
+            self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
+
+
+class GreetingHandler(webapp2.RequestHandler):
+    def post(self, guestbook_id, greeting_id):
+        try:
+            book = Book.fetch_book_by_id(long(guestbook_id))
+        except Exception, e:
+            template_values = {'except': True, 'e': e}
+            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            self.response.write(template.render(template_values))
+        else:
+            book.delete_greeting(greeting_id)
             self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
