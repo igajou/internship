@@ -53,7 +53,12 @@ class Book(ndb.Model):
         Greeting(parent=self.key, content=content).put()
 
     def delete_greeting(self, greeting_id):
-        Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
+        try:
+            greeting_key = Greeting.get_by_id(long(greeting_id), parent=self.key).key
+        except:
+            raise
+        else:
+            greeting_key.delete()
 
     # Tag
     def put_tag(self, _name):
@@ -149,8 +154,14 @@ class GreetingListHandler(webapp2.RequestHandler):
 class GreetingHandler(webapp2.RequestHandler):
     def post(self, guestbook_id, greeting_id):
         book = Book.get_by_id(long(guestbook_id))
-        book.delete_greeting(greeting_id)
-        self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
+        try:
+            book.delete_greeting(greeting_id)
+        except Exception, e:
+            template_values = {'except': True, 'e': e}
+            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            self.response.write(template.render(template_values))
+        else:
+            self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
 app = webapp2.WSGIApplication([
