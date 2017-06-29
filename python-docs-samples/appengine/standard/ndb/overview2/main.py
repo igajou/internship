@@ -57,12 +57,12 @@ class Book(ndb.Model):
 
     # Tag
     def put_tag(self, _name):
-        tag_type = TagType.query(TagType.name == _name).get()
-        if tag_type is None:
-            type_key = TagType(name = _name).put()
-            self.tags.append(Tag(parent=type_key, type=type_key.get()).put())
+        _tag = Tag.query(Tag.name == _name).get()
+        if _tag is None:
+            tag_key = Tag(name = _name).put()
+            self.tags.append(tag_key)
         else:
-            self.tags.append(Tag.query(ancestor=tag_type.key).get().key)
+            self.tags.append(_tag.key)
         return list(set(self.tags)) # Unique list
 
     @classmethod
@@ -88,12 +88,8 @@ class Greeting(ndb.Model):
 # [END greeting]
 
 
-class TagType(ndb.Model):
-    name = ndb.StringProperty()
-
-
 class Tag(ndb.Model):
-    type = ndb.StructuredProperty(TagType)
+    name =  ndb.StringProperty(required=True)
 
 
 class MainPage(webapp2.RequestHandler):
@@ -135,11 +131,11 @@ class BookPage(webapp2.RequestHandler):
 class BookListHandler(webapp2.RequestHandler):
     def post(self):
         guestbook_name = self.request.get('guestbook_name')
-        tagtype_name = self.request.get('tagtype_name')
+        tag_name = self.request.get('tag_name')
         book = Book(
             name = guestbook_name
         )
-        book.tags = book.put_tag(tagtype_name)
+        book.tags = book.put_tag(tag_name)
         book_key = book.put()
         self.redirect('/books/{book_id}'.format(book_id=book_key.id()))
 
@@ -147,7 +143,7 @@ class BookListHandler(webapp2.RequestHandler):
 class BookHandler(webapp2.RequestHandler):
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
-        tagtype_name = self.request.get('tagtype_name')
+        tag_name = self.request.get('tag_name')
         try:
             book = Book.fetch_book_by_id(long(guestbook_id))
         except Exception, e:
@@ -155,7 +151,7 @@ class BookHandler(webapp2.RequestHandler):
             template = JINJA_ENVIRONMENT.get_template('guestbook.html')
             self.response.write(template.render(template_values))
         else:
-            book.tags = book.put_tag(tagtype_name)
+            book.tags = book.put_tag(tag_name)
             book.put_name(guestbook_name)
             book.put()
             self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
