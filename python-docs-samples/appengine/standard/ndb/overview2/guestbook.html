@@ -5,30 +5,30 @@
     <title>Title</title>
 </head>
 <body>
-    <h2>Guestbook: {{ guestbook_name }}</h2>
-    <h4>Tags:
-        {% for tag in tag_keys %}
-            {{ tag.get().type.name }}
-        {% endfor %}</h4>
-    <form action="/api/books/{{ guestbook_id }}" method="post">
-        <form>New guestbook name : <input value="{{ guestbook_name }}" name="guestbook_name">
-              Tag name : <input value="" name="tagtype_name">
-            <input type="submit" value="rename"></form>
-    </form>
-    <hr>
+   <h2>Guestbook: {{ guestbook_name }}</h2>
+   <h4>Tags:
+       {% for tag in tag_keys %}
+           {{ tag.get().name }}
+       {% endfor %}</h4>
+   <form action="/api/books/{{ guestbook_id }}" method="post">
+       <form>New guestbook name : <input value="{{ guestbook_name }}" name="guestbook_name">
+             Tag name : <input value="" name="tag_name">
+           <input type="submit" value="rename & add tag"></form>
+   </form>
+   <hr>
 
-    {% for greeting in greetings %}
-        <blockquote>{{ greeting.content }}
-        <form action="/api/books/{{ guestbook_id }}/greetings/{{ greeting.key.id() }}" method="post">
-            <input type="submit" value="delete"></form>
-        </blockquote>
-    {% endfor %}
+   {% for greeting in greetings %}
+       <blockquote>{{ greeting.content }}
+       <form action="/api/books/{{ guestbook_id }}/greetings/{{ greeting.key.id() }}" method="post">
+           <input type="submit" value="delete"></form>
+       </blockquote>
+   {% endfor %}
 
-    <form action="/api/books/{{ guestbook_id }}/greetings" method="post">
-        <div><textarea name="content" rows="3" cols="60"></textarea></div>
-        <div><input type="submit" value="Sign Guestbook"></div>
-    </form>
-    <a href="/">Guestbook List</a>
+   <form action="/api/books/{{ guestbook_id }}/greetings" method="post">
+       <div><textarea name="content" rows="3" cols="60"></textarea></div>
+       <div><input type="submit" value="Sign Guestbook"></div>
+   </form>
+   <a href="/">Guestbook List</a>
 
 </body>
 </html>
