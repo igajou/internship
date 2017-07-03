@@ -39,8 +39,8 @@ class Book(ndb.Model):
     name = ndb.StringProperty()
     tags = ndb.KeyProperty(kind='Tag', repeated=True)
 
-    def put_name(self, _name):
-        self.name = _name
+    def put_name(self, name):
+        self.name = name
 
     # Greeting
     def fetch_greetings(self):
@@ -52,17 +52,21 @@ class Book(ndb.Model):
     def put_greeting(self, content):
         Greeting(parent=self.key, content=content).put()
 
-    def delete_greeting(self, greeting_id):
-        Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
+    def delete_or_raise_greeting(self, greeting_id):
+        greeting = Greeting.get_by_id(long(greeting_id), parent=self.key)
+        if greeting is None:
+            raise RuntimeError('No such Greeting ID: {}'.format(long(greeting_id)))
+        else:
+            greeting.key.delete()
 
     # Tag
-    def put_tag(self, _name):
-        _tag = Tag.query(Tag.name == _name).get()
-        if _tag is None:
-            tag_key = Tag(name = _name).put()
+    def put_tag(self, name):
+        tag = Tag.query(Tag.name == name).get()
+        if tag is None:
+            tag_key = Tag(name = name).put()
             self.tags.append(tag_key)
         else:
-            self.tags.append(_tag.key)
+            self.tags.append(tag.key)
         return list(set(self.tags)) # Unique list
 
     @classmethod
@@ -70,12 +74,10 @@ class Book(ndb.Model):
         return cls.query().order(cls.name)
 
     @classmethod
-    def fetch_book_by_id(cls, book_id):
-        try:
-            book = cls.get_by_id(long(book_id))
-            book.key
-        except:
-            raise
+    def fetch_or_raise_book(cls, book_id):
+        book = cls.get_by_id(long(book_id))
+        if book is None:
+            raise RuntimeError('No such Book ID: {}'.format(long(book_id)))
         else:
             return book
 
@@ -92,6 +94,18 @@ class Tag(ndb.Model):
     name =  ndb.StringProperty(required=True)
 
 
+class BookDataHandler:
+    def fetch(self, guestbook_id):
+        try:
+            book = Book.fetch_or_raise_book(guestbook_id)
+        except RuntimeError, e:
+            template_values = {'e': e}
+            template = JINJA_ENVIRONMENT.get_template('error.html')
+            self.response.write(template.render(template_values))
+        else:
+            return book
+
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
         books = Book.fetch_books()
@@ -104,14 +118,11 @@ class MainPage(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
 
-class BookPage(webapp2.RequestHandler):
+class BookPage(BookDataHandler, webapp2.RequestHandler):
     def get(self, guestbook_id):
-        try:
-            book = Book.fetch_book_by_id(long(guestbook_id))
-        except Exception, e:
-            template_values = {'except': True, 'e': e}
-            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
-            self.response.write(template.render(template_values))
+        book = BookDataHandler.fetch(self, guestbook_id)
+        if book is None:
+            pass
         else:
             guestbook_name = book.name
             tag_keys = book.tags
@@ -140,16 +151,13 @@ class BookListHandler(webapp2.RequestHandler):
         self.redirect('/books/{book_id}'.format(book_id=book_key.id()))
 
 
-class BookHandler(webapp2.RequestHandler):
+class BookHandler(BookDataHandler, webapp2.RequestHandler):
     def post(self, guestbook_id):
         guestbook_name = self.request.get('guestbook_name')
         tag_name = self.request.get('tag_name')
-        try:
-            book = Book.fetch_book_by_id(long(guestbook_id))
-        except Exception, e:
-            template_values = {'except': True, 'e': e}
-            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
-            self.response.write(template.render(template_values))
+        book = BookDataHandler.fetch(self, guestbook_id)
+        if book is None:
+            pass
         else:
             book.tags = book.put_tag(tag_name)
             book.put_name(guestbook_name)
@@ -157,29 +165,27 @@ class BookHandler(webapp2.RequestHandler):
             self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
-class GreetingListHandler(webapp2.RequestHandler):
+class GreetingListHandler(BookDataHandler, webapp2.RequestHandler):
     def post(self, guestbook_id):
-        try:
-            book = Book.fetch_book_by_id(long(guestbook_id))
-        except Exception, e:
-            template_values = {'except': True, 'e': e}
-            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
-            self.response.write(template.render(template_values))
+        guestbook_id = 111
+        book = BookDataHandler.fetch(self, guestbook_id)
+        if book is None:
+            pass
         else:
             book.put_greeting(self.request.get('content'))
             self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
-class GreetingHandler(webapp2.RequestHandler):
+class GreetingHandler(BookDataHandler, webapp2.RequestHandler):
     def post(self, guestbook_id, greeting_id):
+        book = BookDataHandler.fetch(self, guestbook_id)
         try:
-            book = Book.fetch_book_by_id(long(guestbook_id))
-        except Exception, e:
-            template_values = {'except': True, 'e': e}
-            template = JINJA_ENVIRONMENT.get_template('guestbook.html')
+            book.delete_or_raise_greeting(greeting_id)
+        except RuntimeError, e:
+            template_values = {'e': e}
+            template = JINJA_ENVIRONMENT.get_template('error.html')
             self.response.write(template.render(template_values))
         else:
-            book.delete_greeting(greeting_id)
             self.redirect('/books/{book_id}'.format(book_id=guestbook_id))
 
 
