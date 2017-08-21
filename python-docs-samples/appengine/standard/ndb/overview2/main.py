@@ -39,8 +39,8 @@ class Book(ndb.Model):
     name = ndb.StringProperty()
     tags = ndb.KeyProperty(kind='Tag', repeated=True)
 
-    def put_name(self, _name):
-        self.name = _name
+    def put_name(self, name):
+        self.name = name
 
     # Greeting
     def fetch_greetings(self):
@@ -56,13 +56,13 @@ class Book(ndb.Model):
         Greeting.get_by_id(long(greeting_id), parent=self.key).key.delete()
 
     # Tag
-    def put_tag(self, _name):
-        _tag = Tag.query(Tag.name == _name).get()
-        if _tag is None:
-            tag_key = Tag(name = _name).put()
+    def put_tag(self, name):
+        tag = Tag.query(Tag.name == name).get()
+        if tag is None:
+            tag_key = Tag(name = name).put()
             self.tags.append(tag_key)
         else:
-            self.tags.append(_tag.key)
+            self.tags.append(tag.key)
         return list(set(self.tags)) # Unique list
 
     @classmethod
